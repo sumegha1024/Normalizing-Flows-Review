@@ -1,2 +1,2 @@
 # Normalizing-Flows-Review
-Experimentation for comparison of Normalizing Flow methods with mean-field VI and MCMC methods
+Experiments for comparison of Normalizing Flow Aided Variational Inference with mean-field VI and MCMC.
