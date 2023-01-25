@@ -30,13 +30,11 @@ from sklearn.linear_model import LogisticRegression
 
 
 parser = argparse.ArgumentParser(description='inputs_logits')
-parser.add_argument('--flows', default = 'NAF', type=str, help='type of flow model; Use None if result for flows is not required')
-parser.add_argument('--mcmc', default = 'mh', type=str, help='type of mcmc method; Use None if result for mcmc is not required')
 parser.add_argument('--rho',default =0.0, type=float, help='Correlation coefficient for design matrix')
 parser.add_argument('--tau',default =1.0, type=float, help='Standard dev for simulated data')
 parser.add_argument('--lr', default = 0.0005, type=float, help='learning rate')
 parser.add_argument('--seed',default =3, type=int, help='seed for simulation')
-parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Out/Out_Logistic', type=str, help='path to results')
+parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Temp/', type=str, help='path to results')
 parser.add_argument('--data_dim',default =2, type=int, help='dimension of beta vector')
 parser.add_argument('--n_data',default =50, type=int, help='number of samples for y')
 parser.add_argument('--sparse',default =0.2, type=float, help='sparsity level in %')
@@ -47,16 +45,11 @@ args = parser.parse_args()
 
 set_all_seeds(0)
 
-#tuning_dict= {'2_50':[200000,15000,1,64,20],'2_100':[200000,15000,0.8,64,20], '2_200':[200000,15000,0.5,64,20], '20_50':[1000000,15000,0.2,64,100],'20_100':[1000000,15000,0.15,64,100],'20_200':[1000000,15000,0.1,64,100],
-#    '50_50':[2000000,15000,0.2,64,200],'50_100':[4000000,15000,0.15,64,400],'50_200':[4000000,15000,0.1,64,400],'100_50':[4000000,15000,0.1,128,400],'100_100':[5000000,15000,0.1,128,500],'100_200':[5000000,15000,0.08,128,500]}
-
-#tuning_dict= {'2_50':[200000,15000,1,64,20],'2_100':[200000,15000,0.8,64,20], '2_200':[200000,15000,0.5,64,20], '20_50':[200000,15000,0.2,64,20],'20_100':[1000000,15000,0.15,64,100],'20_200':[200000,15000,0.1,64,20],
-#    '50_50':[200000,15000,0.2,64,20],'50_100':[200000,15000,0.15,64,20],'50_200':[200000,15000,0.1,64,20],'100_50':[200000,15000,0.1,128,20],'100_100':[200000,15000,0.1,128,20],'100_200':[200000,15000,0.08,128,20]}
 
 #tuning_dict= {'2_50':[200000,15000,1,64,20],'2_100':[200000,15000,0.8,64,20], '2_200':[200000,15000,0.5,64,20], '20_50':[1000000,15000,0.2,64,100],'20_100':[1000000,15000,0.15,64,100],'20_200':[1000000,15000,0.1,64,100],
 #    '50_50':[2000000,50000,0.2,64,200],'50_100':[4000000,50000,0.15,64,400],'50_200':[4000000,50000,0.1,64,400],'100_50':[4000000,50000,0.1,128,400],'100_100':[5000000,50000,0.1,128,500],'100_200':[5000000,50000,0.08,128,500]}
 
-tuning_dict= {'2_50':[2000,15000,1,64,20],'2_100':[200000,15000,0.8,64,20], '2_200':[200000,15000,0.5,64,20], '20_50':[1000000,15000,0.2,64,100],'20_100':[1000000,15000,0.15,64,100],'20_200':[1000000,15000,0.1,64,100],
+tuning_dict= {'2_50':[200000,15000,1,64,20],'2_100':[200000,15000,0.8,64,20], '2_200':[200000,15000,0.5,64,20], '20_50':[10000,150,0.2,64,100],'20_100':[1000000,15000,0.15,64,100],'20_200':[1000000,15000,0.1,64,100],
     '50_50':[2000000,15000,0.2,64,200],'50_100':[4000000,15000,0.15,64,400],'50_200':[4000000,15000,0.1,64,400],'100_50':[4000000,15000,0.1,128,400],'100_100':[5000000,15000,0.1,128,500],'100_200':[5000000,15000,0.08,128,500]}
 
 
@@ -67,7 +60,6 @@ mh_noise =tuning_dict[str(args.data_dim)+'_'+str(args.n_data)][2]
 cmade_dim=tuning_dict[str(args.data_dim)+'_'+str(args.n_data)][3]
 thin = tuning_dict[str(args.data_dim)+'_'+str(args.n_data)][4]
 
-beta_plot_pairs=[(9,15)]
 #beta_plot_pairs=[(0,1),(5,6),(27,19),(46,3),(17,12),(23,2),(6,35),(9,11),(5,21),(13,40)]
 ############################################################################################################################
 '''Simulate dataset for Bayesian Regression experiments'''
@@ -103,6 +95,9 @@ lr_fit = LogisticRegression(penalty='none',fit_intercept=False,solver='sag').fit
 
 Time = {"MH":None,"Flows":None,"MF-VI":None}
 acc = {"MH":None,"Flows":None,"MF-VI":None}
+se_beta_avg = {"Gibbs":None,"Flows":None,"MF-VI":None}
+se_beta_min = {"Gibbs":None,"Flows":None,"MF-VI":None}
+se_beta_max = {"Gibbs":None,"Flows":None,"MF-VI":None}
 
 
 set_all_seeds(args.seed)
@@ -145,7 +140,11 @@ beta_samples_mh_store=beta_samples_mh_store[idx,:]
 sns.kdeplot(beta_samples_mh_store[:,0].numpy(),color='red',label='MCMC',ax=axes[0])
 sns.kdeplot(beta_samples_mh_store[:,1].numpy(),color='red',label='MCMC',ax=axes[1])
 
-rmse_betas_mcmc = np.sum((beta_samples_mh_store.numpy() - beta0)**2,1)
+se_beta_avg["Gibbs"] =np.mean(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
+se_beta_min["Gibbs"] =np.min(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
+se_beta_max["Gibbs"] =np.max(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
+
+sse_betas_mcmc = np.sum((beta_samples_mh_store.numpy() - beta0)**2,1)
 acc["MH"]=mod_acc(yt,Xt,beta_samples_mh_store)
 
 logitspred_mcmc = np.dot(Xt,beta_samples_mh_store.T)
@@ -221,7 +220,11 @@ beta_samples_VI=beta_samples_VI.detach().numpy()
 sns.kdeplot(beta_samples_VI[:,0],color='blue',label='MF-VI',ax=axes[0])
 sns.kdeplot(beta_samples_VI[:,1],color='blue',label='MF-VI',ax=axes[1])
 
-rmse_betas_vi = np.sum((beta_samples_VI - beta0)**2,1)
+se_beta_avg["MF-VI"] =np.mean(np.std(beta_samples_VI,axis=0,ddof=1))
+se_beta_min["MF-VI"] =np.min(np.std(beta_samples_VI,axis=0,ddof=1))
+se_beta_max["MF-VI"] =np.max(np.std(beta_samples_VI,axis=0,ddof=1))
+
+sse_betas_vi = np.sum((beta_samples_VI - beta0)**2,1)
 logitspred_vi = np.dot(Xt,beta_samples_VI.T)
 probits_vi=np.exp(logitspred_vi)/(1+np.exp(logitspred_vi))
 out_labels_vi=(probits_vi>=0.5)
@@ -286,23 +289,26 @@ class model(object):
                     (it+1, total, loss.data))
         return loss_store
 
-if args.flows=='NAF':
-    set_all_seeds(args.seed)
-    mdl = model(exact_log_density, "DSF", 8,cmade_dim)
-    start = time.time()
-    loss_store = mdl.train(epochs_flows)
-    Time["Flows"]=time.time() - start
-    data = mdl.mdl.sample(10000)[0].data.numpy()
-    sns.kdeplot(data[:,0],color='green',label='Flows',ax=axes[0])
-    sns.kdeplot(data[:,1],color='green',label='Flows',ax=axes[1])
-    acc["Flows"]=mod_acc(yt,Xt,beta_samples_mh_store)
 
-    logitspred_flows = np.dot(Xt,data.T)
-    probits_flows=np.exp(logitspred_flows)/(1+np.exp(logitspred_flows))
-    out_labels_flows=(probits_flows>=0.5)
-    count_flows=(out_labels_flows.T==ytlabels)
-    acc_samples_flows =count_flows.sum(1)/len(ytlabels)
-    rmse_betas_flows = np.sum((data[:,0:p] - beta0)**2,1)
+set_all_seeds(args.seed)
+mdl = model(exact_log_density, "DSF", 8,cmade_dim)
+start = time.time()
+loss_store = mdl.train(epochs_flows)
+Time["Flows"]=time.time() - start
+data = mdl.mdl.sample(10000)[0].data.numpy()
+sns.kdeplot(data[:,0],color='green',label='Flows',ax=axes[0])
+sns.kdeplot(data[:,1],color='green',label='Flows',ax=axes[1])
+acc["Flows"]=mod_acc(yt,Xt,beta_samples_mh_store)
+se_beta_avg["Flows"] =np.mean(np.std(data[:,0:p],axis=0,ddof=1))
+se_beta_min["Flows"] =np.min(np.std(data[:,0:p],axis=0,ddof=1))
+se_beta_max["Flows"] =np.max(np.std(data[:,0:p],axis=0,ddof=1))
+
+logitspred_flows = np.dot(Xt,data.T)
+probits_flows=np.exp(logitspred_flows)/(1+np.exp(logitspred_flows))
+out_labels_flows=(probits_flows>=0.5)
+count_flows=(out_labels_flows.T==ytlabels)
+acc_samples_flows =count_flows.sum(1)/len(ytlabels)
+sse_betas_flows = np.sum((data[:,0:p] - beta0)**2,1)
 
 
 ################################################PLOTS##############################################################
@@ -329,7 +335,7 @@ plt.clf()
 
 
 ##PAIRWISE PLOTS OF BETA PARAMS
-beta_pairs=True
+beta_pairs=False
 if beta_pairs==True:
     for tuples in beta_plot_pairs:
         fig, axes = plt.subplots(1, 2, figsize=(6,3))   
@@ -367,12 +373,12 @@ plt.plot(loss_store_vi)
 plt.savefig(args.out+'vi_loss_seed_'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
 plt.clf()
 
-sns.kdeplot(rmse_betas_mcmc,color='red',label='MCMC')
-sns.kdeplot(rmse_betas_vi,color='blue',label='MF-VI')
-sns.kdeplot(rmse_betas_flows,color='green',label='Flows')
+sns.kdeplot(sse_betas_mcmc,color='red',label='MCMC')
+sns.kdeplot(sse_betas_vi,color='blue',label='MF-VI')
+sns.kdeplot(sse_betas_flows,color='green',label='Flows')
 plt.legend()
 plt.ylabel('Density of '+r'$||\beta-\beta_{0}||_{2}^{2}$')
-plt.savefig(args.out+'rmse_beta_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.savefig(args.out+'sse_beta_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
 plt.clf()
 
 sns.kdeplot(acc_samples_mcmc,color='red',label='MCMC')
@@ -402,12 +408,7 @@ plt.clf()
 print("accept",accept)
 print("n_data",args.n_data)
 print("data_dim p",args.data_dim)
-#print("beta0",beta0)
-#print("fit",lr_fit.coef_)
-#print("betaflows",data.mean(0))
-#print("betamh",beta_samples_mh_store.mean(0))
-#print("betavi",beta_samples_VI.mean(0))
-#print("acc",acc)
+print("Acc",acc)
 print("Time in s",Time)
 
 #####################################################INFERENCE##########################################################################
@@ -438,22 +439,22 @@ confusion["MH"] = metrics.confusion_matrix(ht_beta0,ht_mcmc)
 confusion["MF-VI"] = metrics.confusion_matrix(ht_beta0,ht_vi)
 confusion["Flows"] = metrics.confusion_matrix(ht_beta0,ht_flows)
 
+##Calculating F-score
+prec = np.array([sum(ht_beta0*ht_mcmc)/sum(ht_mcmc),sum(ht_beta0*ht_flows)/sum(ht_flows),sum(ht_beta0*ht_vi)/sum(ht_vi)])
+recall = np.array([sum(ht_beta0*ht_mcmc)/sum(ht_beta0),sum(ht_beta0*ht_flows)/sum(ht_beta0),sum(ht_beta0*ht_vi)/sum(ht_beta0)])
+
+fscore_l=(2*prec*recall)/(prec+recall)
+fscore_dict = {"Gibbs":fscore_l[0],"Flows":fscore_l[1],"MF-VI":fscore_l[2]}
 
 
-print("cvg_analysis flows",cint_flows,q_lower_flows)
-print("cvg_analysis mc",cint_mcmc,q_lower_mcmc)
-print("cvg_analysis vi",cint_vi,q_lower_vi)
-print("cvg_analysis flows",cint_flows,q_upper_flows)
-print("cvg_analysis mc",cint_mcmc,q_upper_mcmc)
-print("cvg_analysis vi",cint_vi,q_upper_vi)
-
-print("beta0",beta0)
 print("Correct prop",correct_pct)
 print("Confusion MCMC",confusion["MH"])
 print("Confusion MF-VI",confusion["MF-VI"])
 print("Confusion Flows",confusion["Flows"])
-
-
+print("Fscore",fscore_dict)
+print("SE_min",se_beta_min)
+print("SE_avg",se_beta_avg)
+print("SE_max",se_beta_max)
 
 #############Write Results to Excel######################################################
 

@@ -24,7 +24,6 @@ import statsmodels.api as sm
 
 
 parser = argparse.ArgumentParser(description='inputs_regression')
-parser.add_argument('--flows', default = 'NAF', type=str, help='type of flow model; Use None if result for flows is not required')
 parser.add_argument('--mcmc', default = 'gibbs', type=str, help='type of mcmc method; Use None if result for mcmc is not required')
 parser.add_argument('--rho',default =0.0, type=float, help='Correlation coefficient for design matrix')
 parser.add_argument('--sigma',default =1.0, type=float, help='Standard dev for simulated data')
@@ -33,8 +32,8 @@ parser.add_argument('--sigma_prior', default=False, action='store_true', help='W
 parser.add_argument('--lr', default = 0.0005, type=float, help='learning rate')
 parser.add_argument('--seed',default =3, type=int, help='seed for simulation')
 parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Temp/', type=str, help='path to results')
-parser.add_argument('--data_dim',default =100, type=int, help='dimension of beta vector')
-parser.add_argument('--n_data',default =100, type=int, help='number of samples for y')
+parser.add_argument('--data_dim',default =2, type=int, help='dimension of beta vector')
+parser.add_argument('--n_data',default =50, type=int, help='number of samples for y')
 parser.add_argument('--sparse',default =0.2, type=float, help='sparsity level in %')
 parser.add_argument('--writecsv', default=False, action='store_true', help='Whether we want to write metrics to Result.xlsx')
 
@@ -99,6 +98,9 @@ set_all_seeds(args.seed)
 
 rmse = {"Gibbs":None,"Flows":None,"MF-VI":None}
 Time = {"Gibbs":None,"Flows":None,"MF-VI":None}
+se_beta_avg = {"Gibbs":None,"Flows":None,"MF-VI":None}
+se_beta_min = {"Gibbs":None,"Flows":None,"MF-VI":None}
+se_beta_max = {"Gibbs":None,"Flows":None,"MF-VI":None}
 
 if args.sigma_prior == False:
     fig, axes = plt.subplots(1, 2, figsize=(6,3))
@@ -144,16 +146,21 @@ if args.mcmc=="gibbs":
  
     Time["Gibbs"] = time.time()-start
     rmse["Gibbs"]= mod_rmse(np.array(yt),np.array(Xt),beta_samples_MCMC_store)
+    se_beta_avg["Gibbs"] =np.mean(np.std(beta_samples_MCMC_store,axis=0,ddof=1))
+    se_beta_min["Gibbs"] =np.min(np.std(beta_samples_MCMC_store,axis=0,ddof=1))
+    se_beta_max["Gibbs"] =np.max(np.std(beta_samples_MCMC_store,axis=0,ddof=1))
+
+
 
     #Plots
     
     sns.kdeplot(beta_samples_MCMC_store[:,0],color='red',label='MCMC',ax=axes[0])
     sns.kdeplot(beta_samples_MCMC_store[:,1],color='red',label='MCMC',ax=axes[1])
     
-    rmse_betas_mcmc = np.sum((beta_samples_MCMC_store - beta0)**2,1)
+    sse_betas_mcmc = np.sum((beta_samples_MCMC_store - beta0)**2,1)
 
 
-    rmse_ypred_mcmc = np.sum((np.dot(Xt,beta_samples_MCMC_store.T)-np.expand_dims(yt.numpy(),1))**2,0)
+    sse_ypred_mcmc = np.sum((np.dot(Xt,beta_samples_MCMC_store.T)-np.expand_dims(yt.numpy(),1))**2,0)
 
 
 
@@ -332,23 +339,27 @@ if args.sigma_prior==True:
     sns.kdeplot(sigma_samples_VI,color='blue',label='MF-VI',ax=axes[2])
 
 rmse["MF-VI"]= mod_rmse(np.array(yt),np.array(Xt),beta_samples_VI)
-rmse_betas_vi = np.sum((beta_samples_VI - beta0)**2,1)
-rmse_ypred_vi = np.sum((np.dot(Xt,beta_samples_VI.T)-np.expand_dims(yt.numpy(),1))**2,0)
+se_beta_avg["MF-VI"] =np.mean(np.std(beta_samples_VI,axis=0,ddof=1))
+se_beta_min["MF-VI"] =np.min(np.std(beta_samples_VI,axis=0,ddof=1))
+se_beta_max["MF-VI"] =np.max(np.std(beta_samples_VI,axis=0,ddof=1))
+
+sse_betas_vi = np.sum((beta_samples_VI - beta0)**2,1)
+sse_ypred_vi = np.sum((np.dot(Xt,beta_samples_VI.T)-np.expand_dims(yt.numpy(),1))**2,0)
 
 
 ################################################FLOWS###########################################################################
-if args.flows=='NAF':
-    set_all_seeds(args.seed)
-    mdl = model(exact_log_density, "DSF", 8,cmade_dim)
-    start = time.time()
-    loss_store = mdl.train(epochs_flows)
-    Time["Flows"]=time.time() - start
-    data = mdl.mdl.sample(10000)[0].data.numpy()
-    sns.kdeplot(data[:,0],color='green',label='Flows',ax=axes[0])
-    sns.kdeplot(data[:,1],color='green',label='Flows',ax=axes[1])
-    if args.sigma_prior==True:
-        sns.kdeplot((np.log(1+np.exp(data[:,-1])))**2,color='green',label='Flows',ax=axes[2])
-    rmse["Flows"]= mod_rmse(np.array(yt),np.array(Xt),data[:,list(range(0,p))])
+
+set_all_seeds(args.seed)
+mdl = model(exact_log_density, "DSF", 8,cmade_dim)
+start = time.time()
+loss_store = mdl.train(epochs_flows)
+Time["Flows"]=time.time() - start
+data = mdl.mdl.sample(10000)[0].data.numpy()
+sns.kdeplot(data[:,0],color='green',label='Flows',ax=axes[0])
+sns.kdeplot(data[:,1],color='green',label='Flows',ax=axes[1])
+if args.sigma_prior==True:
+    sns.kdeplot((np.log(1+np.exp(data[:,-1])))**2,color='green',label='Flows',ax=axes[2])
+rmse["Flows"]= mod_rmse(np.array(yt),np.array(Xt),data[:,list(range(0,p))])
 
 if p==2: 
     plt.legend(bbox_to_anchor = (2.50, 0.6), loc='center right')   
@@ -356,9 +367,12 @@ if p==2:
     fig.savefig(args.out+'beta_'+'trial'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
 plt.clf()
 
+se_beta_avg["Flows"] =np.mean(np.std(data[:,0:p],axis=0,ddof=1))
+se_beta_min["Flows"] =np.min(np.std(data[:,0:p],axis=0,ddof=1))
+se_beta_max["Flows"] =np.max(np.std(data[:,0:p],axis=0,ddof=1))
 
-rmse_betas_flows = np.sum((data[:,0:p] - beta0)**2,1)
-rmse_ypred_flows = np.sum((np.dot(Xt,data[:,0:p].T)-np.expand_dims(yt.numpy(),1))**2,0)
+sse_betas_flows = np.sum((data[:,0:p] - beta0)**2,1)
+sse_ypred_flows = np.sum((np.dot(Xt,data[:,0:p].T)-np.expand_dims(yt.numpy(),1))**2,0)
 
 
 #######################################PLOTS###########################################################################################################
@@ -373,8 +387,8 @@ if args.sigma_prior==True:
     plt.tight_layout()
     plt.savefig(args.out+'sigmasq'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
     plt.clf()
-    #print("sigmasq mcmc",np.mean(sigma_samples_MCMC_store))
-    #print("sigmasq flows",np.mean((np.log(1+np.exp(data[:,-1])))**2))
+    #print("sigmasq mcmc",(sigma_samples_MCMC_store).mean(0))
+    #print("sigmasq flows",((np.log(1+np.exp(data[:,-1])))**2).mean(0))
 
 
 
@@ -395,10 +409,10 @@ if p==2:
     plt.savefig(args.out+'contour'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
     plt.clf()
 
-if args.flows != 'None':
-    plt.plot(loss_store)
-    plt.savefig(args.out+'flows_loss_seed_'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
-    plt.clf()
+#Flows Loss
+plt.plot(loss_store)
+plt.savefig(args.out+'flows_loss_seed_'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.clf()
 
 plt.plot(loss_store_vi)
 plt.savefig(args.out+'vi_loss_seed_'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
@@ -406,23 +420,23 @@ plt.clf()
 
 
 if args.mcmc=="gibbs":
-    sns.kdeplot(rmse_betas_mcmc,color='red',label='MCMC')
-sns.kdeplot(rmse_betas_flows,color='green',label='Flows')
-sns.kdeplot(rmse_betas_vi,color='blue',label='MF-VI')
+    sns.kdeplot(sse_betas_mcmc,color='red',label='MCMC')
+sns.kdeplot(sse_betas_flows,color='green',label='Flows')
+sns.kdeplot(sse_betas_vi,color='blue',label='MF-VI')
 plt.legend()
 plt.ylabel('Density of '+r'$||\beta-\beta_{0}||_{2}^{2}$')
 plt.tight_layout()
-plt.savefig(args.out+'rmse_beta_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.savefig(args.out+'sse_beta_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
 plt.clf()
 
 if args.mcmc=="gibbs":
-    sns.kdeplot(rmse_ypred_mcmc,color='red',label='MCMC')
-sns.kdeplot(rmse_ypred_flows,color='green',label='Flows')
-sns.kdeplot(rmse_ypred_vi,color='blue',label='MF-VI')
+    sns.kdeplot(sse_ypred_mcmc,color='red',label='MCMC')
+sns.kdeplot(sse_ypred_flows,color='green',label='Flows')
+sns.kdeplot(sse_ypred_vi,color='blue',label='MF-VI')
 plt.legend()
 plt.ylabel('Density of '+r'$||\hat{y}_{\beta}-y_{true}||_{2}^{2}$')
 plt.tight_layout()
-plt.savefig(args.out+'rmse_ypred_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.savefig(args.out+'sse_ypred_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
 plt.clf()
 
 
@@ -431,23 +445,20 @@ print("data_dim p",args.data_dim)
 print("rmse",rmse)
 print("Time in s",Time)
 
-if args.mcmc!='None' and args.flows!='None':
-    ypred_mcmc = np.dot(np.array(Xt),beta_samples_MCMC_store.mean(0))    
-    ypred_flows = np.dot(np.array(Xt),data[:,list(range(0,p))].mean(0))
-    ypred_vi = np.dot(np.array(Xt),beta_samples_VI.mean(0))
-    fig, axes = plt.subplots(1, 3, figsize=(6,2))
-    axes[0].scatter(ypred_mcmc,yt.numpy())
-    axes[1].scatter(ypred_flows,yt.numpy())
-    axes[2].scatter(ypred_vi,yt.numpy())
-    #axes[0].set(xlabel="Fitted",ylabel="Actual")
-    #axes[1].set(xlabel="Fitted",ylabel="Actual")
-    #axes[2].set(xlabel="Fitted",ylabel="Actual")
-    fig.supxlabel('Fitted')
-    fig.supylabel('Actual')
+fig, axes = plt.subplots(1, 3, figsize=(6,2))
+if args.mcmc=='gibbs':
+    ypred_mcmc = np.dot(np.array(Xt),beta_samples_MCMC_store.mean(0))
+    axes[0].scatter(ypred_mcmc,yt.numpy())    
+ypred_flows = np.dot(np.array(Xt),data[:,list(range(0,p))].mean(0))
+ypred_vi = np.dot(np.array(Xt),beta_samples_VI.mean(0))
+axes[1].scatter(ypred_flows,yt.numpy())
+axes[2].scatter(ypred_vi,yt.numpy())
+fig.supxlabel('Fitted')
+fig.supylabel('Actual')
    
-    fig.tight_layout()
-    plt.savefig(args.out+'actualvsfitted_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
-    plt.clf()
+fig.tight_layout()
+plt.savefig(args.out+'actualvsfitted_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.clf()
 
 ##MCMC DIAGNOSTIC PLOTS###
 
@@ -517,11 +528,24 @@ ht_flows = (q_lower_flows > np.zeros(p)) | (np.zeros(p) > q_upper_flows)
 confusion["MF-VI"] = metrics.confusion_matrix(ht_beta0,ht_vi)
 confusion["Flows"] = metrics.confusion_matrix(ht_beta0,ht_flows)
 
+##Calculating F-score
+prec = np.array([1,sum(ht_beta0*ht_flows)/sum(ht_flows),sum(ht_beta0*ht_vi)/sum(ht_vi)])
+recall = np.array([1,sum(ht_beta0*ht_flows)/sum(ht_beta0),sum(ht_beta0*ht_vi)/sum(ht_beta0)])
+if args.mcmc=="gibbs":
+    prec[0]=sum(ht_beta0*ht_mcmc)/sum(ht_mcmc)
+    recall[0]=sum(ht_beta0*ht_mcmc)/sum(ht_beta0)
+
+fscore_l=(2*prec*recall)/(prec+recall)
+fscore_dict = {"Gibbs":fscore_l[0],"Flows":fscore_l[1],"MF-VI":fscore_l[2]}
+
 print("Correct prop",correct_pct)
 print("Confusion Gibbs",confusion["Gibbs"])
 print("Confusion MF-VI",confusion["MF-VI"])
 print("Confusion Flows",confusion["Flows"])
-
+print("Fscore",fscore_dict)
+print("SE_min",se_beta_min)
+print("SE_avg",se_beta_avg)
+print("SE_max",se_beta_max)
 
 #############Write Results to Excel######################################################
 
