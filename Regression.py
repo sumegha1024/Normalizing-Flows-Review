@@ -32,7 +32,7 @@ parser.add_argument('--tau',default =1.0, type=float, help='Standard dev for bet
 parser.add_argument('--sigma_prior', default=False, action='store_true', help='Whether we want sigma to be treated as constant or use a prior')
 parser.add_argument('--lr', default = 0.0005, type=float, help='learning rate')
 parser.add_argument('--seed',default =3, type=int, help='seed for simulation')
-parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Out/Out_Regression/Temp/', type=str, help='path to results')
+parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Temp/', type=str, help='path to results')
 parser.add_argument('--data_dim',default =100, type=int, help='dimension of beta vector')
 parser.add_argument('--n_data',default =100, type=int, help='number of samples for y')
 parser.add_argument('--sparse',default =0.2, type=float, help='sparsity level in %')
@@ -60,7 +60,7 @@ global n,nt,p,y,yt,X,Xt,tau
 tau=args.tau
 nw=args.n_data
 p=args.data_dim
-beta0=np.random.uniform(0.5,1,p)
+beta0=np.random.uniform(0.5,2,p)
 idx0=set([item for item in range(p)])
 S0=random.sample(idx0,int(p*(1-args.sparse)))
 if p > 10:
