@@ -43,13 +43,16 @@ parser.add_argument('--writecsv', default=False, action='store_true', help='Whet
 
 args = parser.parse_args()
 
+print("n_data",args.n_data)
+print("data_dim p",args.data_dim)
+print("seed",args.seed)
 set_all_seeds(0)
 
 
 #tuning_dict= {'2_50':[200000,15000,1,64,20],'2_100':[200000,15000,0.8,64,20], '2_200':[200000,15000,0.5,64,20], '20_50':[1000000,15000,0.2,64,100],'20_100':[1000000,15000,0.15,64,100],'20_200':[1000000,15000,0.1,64,100],
 #    '50_50':[2000000,50000,0.2,64,200],'50_100':[4000000,50000,0.15,64,400],'50_200':[4000000,50000,0.1,64,400],'100_50':[4000000,50000,0.1,128,400],'100_100':[5000000,50000,0.1,128,500],'100_200':[5000000,50000,0.08,128,500]}
 
-tuning_dict= {'2_50':[200000,15000,1,64,20],'2_100':[200000,15000,0.8,64,20], '2_200':[200000,15000,0.5,64,20], '20_50':[10000,150,0.2,64,100],'20_100':[1000000,15000,0.15,64,100],'20_200':[1000000,15000,0.1,64,100],
+tuning_dict= {'2_50':[200000,15000,1,64,20],'2_100':[200000,15000,0.8,64,20], '2_200':[200000,15000,0.5,64,20], '20_50':[1000000,15000,0.2,64,100],'20_100':[1000000,15000,0.15,64,100],'20_200':[1000000,15000,0.1,64,100],
     '50_50':[2000000,15000,0.2,64,200],'50_100':[4000000,15000,0.15,64,400],'50_200':[4000000,15000,0.1,64,400],'100_50':[4000000,15000,0.1,128,400],'100_100':[5000000,15000,0.1,128,500],'100_200':[5000000,15000,0.08,128,500]}
 
 
@@ -95,9 +98,9 @@ lr_fit = LogisticRegression(penalty='none',fit_intercept=False,solver='sag').fit
 
 Time = {"MH":None,"Flows":None,"MF-VI":None}
 acc = {"MH":None,"Flows":None,"MF-VI":None}
-se_beta_avg = {"Gibbs":None,"Flows":None,"MF-VI":None}
-se_beta_min = {"Gibbs":None,"Flows":None,"MF-VI":None}
-se_beta_max = {"Gibbs":None,"Flows":None,"MF-VI":None}
+se_beta_avg = {"MH":None,"Flows":None,"MF-VI":None}
+se_beta_min = {"MH":None,"Flows":None,"MF-VI":None}
+se_beta_max = {"MH":None,"Flows":None,"MF-VI":None}
 
 
 set_all_seeds(args.seed)
@@ -140,9 +143,9 @@ beta_samples_mh_store=beta_samples_mh_store[idx,:]
 sns.kdeplot(beta_samples_mh_store[:,0].numpy(),color='red',label='MCMC',ax=axes[0])
 sns.kdeplot(beta_samples_mh_store[:,1].numpy(),color='red',label='MCMC',ax=axes[1])
 
-se_beta_avg["Gibbs"] =np.mean(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
-se_beta_min["Gibbs"] =np.min(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
-se_beta_max["Gibbs"] =np.max(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
+se_beta_avg["MH"] =np.mean(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
+se_beta_min["MH"] =np.min(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
+se_beta_max["MH"] =np.max(np.std(beta_samples_mh_store.numpy(),axis=0,ddof=1))
 
 sse_betas_mcmc = np.sum((beta_samples_mh_store.numpy() - beta0)**2,1)
 acc["MH"]=mod_acc(yt,Xt,beta_samples_mh_store)
@@ -297,7 +300,11 @@ loss_store = mdl.train(epochs_flows)
 Time["Flows"]=time.time() - start
 data = mdl.mdl.sample(10000)[0].data.numpy()
 sns.kdeplot(data[:,0],color='green',label='Flows',ax=axes[0])
+if p>2: axes[0].axvline(x=0, color='purple',ls='--')
+axes[0].axvline(x=beta0[0], color='gray',ls='--', label='Truth')
 sns.kdeplot(data[:,1],color='green',label='Flows',ax=axes[1])
+if p>2: axes[1].axvline(x=0, color='purple',ls='--')
+axes[1].axvline(x=beta0[1], color='gray',ls='--', label='Truth')
 acc["Flows"]=mod_acc(yt,Xt,beta_samples_mh_store)
 se_beta_avg["Flows"] =np.mean(np.std(data[:,0:p],axis=0,ddof=1))
 se_beta_min["Flows"] =np.min(np.std(data[:,0:p],axis=0,ddof=1))
@@ -312,25 +319,25 @@ sse_betas_flows = np.sum((data[:,0:p] - beta0)**2,1)
 
 
 ################################################PLOTS##############################################################
-if p==2: 
-    plt.legend(bbox_to_anchor = (1.75, 0.6), loc='center right')   
-    fig.tight_layout()
-    fig.savefig(args.out+'beta_'+'trial'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
-    plt.clf()
 
-    fig, ax = plt.subplots()
-    handles =[]
-    sns.kdeplot(data[:,0],data[:,1],color='green',label='Flows',ax=ax)
-    handles.append(mlines.Line2D([], [], color='green', label="Flows"))
-    sns.kdeplot(beta_samples_VI[:,0],beta_samples_VI[:,1],color='blue',label='MF-VI',ax=ax)
-    handles.append(mlines.Line2D([], [], color='blue', label="MF-VI"))
-    sns.kdeplot(beta_samples_mh_store[:,0],beta_samples_mh_store[:,1],color='red',label='Gibbs',ax=ax)
-    handles.append(mlines.Line2D([], [], color='red', label="MCMC"))
-    ax.legend(handles = handles)
-    plt.xlabel(r'$\beta_{1}$')
-    plt.ylabel(r'$\beta_{2}$')
-    plt.tight_layout()
-    plt.savefig(args.out+'contour'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.legend(bbox_to_anchor = (1.75, 0.6), loc='center right')   
+fig.tight_layout()
+fig.savefig(args.out+'beta_'+'trial'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.clf()
+
+fig, ax = plt.subplots()
+handles =[]
+sns.kdeplot(data[:,0],data[:,1],color='green',label='Flows',ax=ax)
+handles.append(mlines.Line2D([], [], color='green', label="Flows"))
+sns.kdeplot(beta_samples_VI[:,0],beta_samples_VI[:,1],color='blue',label='MF-VI',ax=ax)
+handles.append(mlines.Line2D([], [], color='blue', label="MF-VI"))
+sns.kdeplot(beta_samples_mh_store[:,0],beta_samples_mh_store[:,1],color='red',label='MCMC',ax=ax)
+handles.append(mlines.Line2D([], [], color='red', label="MCMC"))
+ax.legend(handles = handles)
+plt.xlabel(r'$\beta_{1}$')
+plt.ylabel(r'$\beta_{2}$')
+plt.tight_layout()
+plt.savefig(args.out+'contour'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
 plt.clf() 
 
 
@@ -390,7 +397,6 @@ plt.tight_layout()
 plt.savefig(args.out+'acc_ypred_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
 plt.clf()
 
-
 fig = plt.figure()       
 ax = fig.add_subplot(1,2,1)
 ax.plot(beta_samples_mh_store[:,0])
@@ -406,8 +412,6 @@ plt.savefig(args.out+'MH_Diagnostics/auto_corr_seed'+str(args.seed)+'_ndata_'+st
 plt.clf()
     
 print("accept",accept)
-print("n_data",args.n_data)
-print("data_dim p",args.data_dim)
 print("Acc",acc)
 print("Time in s",Time)
 
@@ -444,7 +448,7 @@ prec = np.array([sum(ht_beta0*ht_mcmc)/sum(ht_mcmc),sum(ht_beta0*ht_flows)/sum(h
 recall = np.array([sum(ht_beta0*ht_mcmc)/sum(ht_beta0),sum(ht_beta0*ht_flows)/sum(ht_beta0),sum(ht_beta0*ht_vi)/sum(ht_beta0)])
 
 fscore_l=(2*prec*recall)/(prec+recall)
-fscore_dict = {"Gibbs":fscore_l[0],"Flows":fscore_l[1],"MF-VI":fscore_l[2]}
+fscore_dict = {"MH":fscore_l[0],"Flows":fscore_l[1],"MF-VI":fscore_l[2]}
 
 
 print("Correct prop",correct_pct)
@@ -456,56 +460,59 @@ print("SE_min",se_beta_min)
 print("SE_avg",se_beta_avg)
 print("SE_max",se_beta_max)
 
+###Further Diagnostic Analysis. This is not required in general to reproduce results in paper.
+if args.seed==3:
+    print("beta0",beta0)
+    beta_nonzero=beta0.nonzero()
+    for i in range(beta_nonzero[0].shape[0]):
+        idxb = beta_nonzero[0][i]
+        plt.figure(figsize=(6.4,4.8))
+        sns.kdeplot(beta_samples_mh_store[:,idxb],color='red',label='MCMC')
+        sns.kdeplot(beta_samples_VI[:,idxb],color='blue',label='MF-VI')
+        sns.kdeplot(data[:,idxb],color='green',label='Flows')
+        plt.axvline(x=beta0[idxb], color='gray',ls='--', label='Truth')
+        plt.axvline(x=0, color='purple',ls='--')
+        plt.axvline(x=q_lower_vi[idxb], color='blue',ls='--',label=r'$q_{lower}$'+' MFVI')
+        plt.axvline(x=q_lower_mcmc[idxb], color='red',ls='--',label=r'$q_{lower}$'+' MCMC')
+        plt.axvline(x=q_lower_flows[idxb], color='green',ls='--',label=r'$q_{lower}$'+' Flows')
+        plt.xlabel(r'$\beta$'+'_'+str(idxb))
+        plt.legend()   
+        plt.tight_layout()
+        plt.savefig(args.out+'Diagnostics/'+'beta_idx'+str(idxb)+'trial'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+        plt.clf()
+
+
 #############Write Results to Excel######################################################
 
 if args.writecsv==True:
-    grid_to_row = {'2_50':0,'2_100':1, '2_200':2, '20_50':3,'20_100':4,'20_200':5,
+    grid_to_col = {'2_50':0,'2_100':1, '2_200':2, '20_50':3,'20_100':4,'20_200':5,
     '50_50':6,'50_100':7,'50_200':8,'100_50':9,'100_100':10,'100_200':11}
-    key = grid_to_row[str(args.data_dim)+'_'+str(args.n_data)]
+    key = grid_to_col[str(args.data_dim)+'_'+str(args.n_data)]
     from openpyxl import workbook 
     from openpyxl import load_workbook
-    filepath = args.out+"Result_Logistic.xlsx"
+    filepath = args.out+"Result_logistic.xlsx"
     wb = load_workbook(filepath)
     sheets = wb.sheetnames
-    print(sheets)
-    print(key)
-    main = wb['Main']
-    main.cell(row = key+2, column = 2).value = Time["MH"]
-    main.cell(row = key+2, column = 3).value = Time["Flows"]
-    main.cell(row = key+2, column = 4).value = Time["MF-VI"]
-    main.cell(row = key+2, column = 5).value = acc["MH"]
-    main.cell(row = key+2, column = 6).value = acc["Flows"]
-    main.cell(row = key+2, column = 7).value = acc["MF-VI"]
-    main.cell(row = key+2, column = 8).value = correct_pct["MH"]
-    main.cell(row = key+2, column = 9).value = correct_pct["Flows"]
-    main.cell(row = key+2, column = 10).value = correct_pct["MF-VI"]
-    confusion_mh=wb['Confusion_MH']
-    confusion_flows=wb['Confusion_Flows']
-    confusion_vi=wb['Confusion_VI']
-    if confusion["MH"] is not None:
-        confusion_mh.cell(row=key+2,column=2).value=confusion["MH"][0][0]
-        if len(confusion["MH"][0])>1:
-            confusion_mh.cell(row=key+2,column=3).value=confusion["MH"][0][1]
-        if len(confusion["MH"])>1:
-            confusion_mh.cell(row=key+2,column=4).value=confusion["MH"][1][0]
-        if len(confusion["MH"])>1 and len(confusion["MH"][0])>1:
-            confusion_mh.cell(row=key+2,column=5).value=confusion["MH"][1][1]
-    if confusion["Flows"] is not None:
-        confusion_flows.cell(row=key+2,column=2).value=confusion["Flows"][0][0]
-        if len(confusion["Flows"][0])>1:
-            confusion_flows.cell(row=key+2,column=3).value=confusion["Flows"][0][1]
-        if len(confusion["Flows"])>1:
-            confusion_flows.cell(row=key+2,column=4).value=confusion["Flows"][1][0]
-        if len(confusion["Flows"])>1 and len(confusion["Flows"][0])>1:
-            confusion_flows.cell(row=key+2,column=5).value=confusion["Flows"][1][1]
-    if confusion["MF-VI"] is not None:
-        confusion_vi.cell(row=key+2,column=2).value=confusion["MF-VI"][0][0]
-        if len(confusion["MF-VI"][0])>1:
-            confusion_vi.cell(row=key+2,column=3).value=confusion["MF-VI"][0][1]
-        if len(confusion["MF-VI"])>1:
-            confusion_vi.cell(row=key+2,column=4).value=confusion["MF-VI"][1][0]
-        if len(confusion["MF-VI"])>1 and len(confusion["MF-VI"][0])>1:
-            confusion_vi.cell(row=key+2,column=5).value=confusion["MF-VI"][1][1]
+    time_sheet = wb['Time']
+    time_sheet.cell(row = args.seed+1, column = key+2).value = Time["MH"]
+    time_sheet.cell(row = args.seed+1 + 5 , column = key+2).value = Time["Flows"]
+    time_sheet.cell(row =args.seed+1 + (5*2), column = key+2).value = Time["MF-VI"]
+    acc_sheet = wb['Acc']
+    acc_sheet.cell(row = args.seed+1 , column = key+2).value = acc["MH"]
+    acc_sheet.cell(row = args.seed+1 + 5, column = key+2).value = acc["Flows"]
+    acc_sheet.cell(row = args.seed+1 + (5*2), column = key+2).value = acc["MF-VI"]
+    se_betas = wb['SE_betas']
+    se_betas.cell(row =args.seed+1, column = key+2).value = se_beta_avg["MH"]
+    se_betas.cell(row =args.seed+1 +5, column = key+2).value = se_beta_avg["Flows"]
+    se_betas.cell(row =args.seed+1 + 10, column = key+2).value = se_beta_avg["MF-VI"]    
+    fscore_s = wb['Fscore']
+    fscore_s.cell(row =args.seed+1, column = key+2).value = fscore_dict["MH"]
+    fscore_s.cell(row =args.seed+1 +5, column = key+2).value = fscore_dict["Flows"]
+    fscore_s.cell(row =args.seed+1 + 10, column = key+2).value = fscore_dict["MF-VI"]        
+    cpct = wb['Correct_pct']
+    cpct.cell(row =args.seed+1, column = key+2).value = correct_pct["MH"]
+    cpct.cell(row =args.seed+1 +5, column = key+2).value = correct_pct["Flows"]
+    cpct.cell(row =args.seed+1 + 10, column = key+2).value = correct_pct["MF-VI"]    
     wb.save(filepath) 
 
 
