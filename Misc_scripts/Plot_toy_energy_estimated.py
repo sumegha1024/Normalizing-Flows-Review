@@ -23,7 +23,7 @@ sys.path.append(os.path.join(os.path.dirname(sys.path[0]),'MH_Samplers'))
 from MH_sampler_basic import mh
 from toy_energy import U1, U2, U3, U4, U5, U6, U7, U8, U9
 parser = argparse.ArgumentParser(description='inputs_toyenergy')
-parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Temp/', type=str, help='path to results')
+parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/', type=str, help='path to results')
 parser.add_argument('--method', default = 'True', type=str, help='which algorithm to use; "MH" - metropolis or "NAF" - Flows or "True" - true density')
 args = parser.parse_args()
 
@@ -113,6 +113,7 @@ for i,key in enumerate(toy_energy):
     if args.method == "True":
         n=200       
         ax = fig.add_subplot(3,3,i+1)
+        ax.set_title(key,fontsize=22,fontweight="bold")
         x = np.linspace(-10,10,n)
         y = np.linspace(-10,10,n)
         xx,yy = np.meshgrid(x,y)
