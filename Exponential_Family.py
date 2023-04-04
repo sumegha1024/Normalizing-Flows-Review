@@ -20,13 +20,14 @@ import math
 import statsmodels.api as sm
 import pandas as pd
 from scipy.interpolate import splrep, splev
+import matplotlib.lines as mlines
 #from utils import kldiv
 
 
 parser = argparse.ArgumentParser(description='inputs_exp')
 parser.add_argument('--lr', default = 0.0005, type=float, help='learning rate')
 parser.add_argument('--seed',default =2, type=int, help='seed for simulation')
-parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Out/Out_Exponential/', type=str, help='path to results')
+parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Temp2/', type=str, help='path to results')
 parser.add_argument('--n_data',default =50, type=int, help='number of samples for observed y')
 parser.add_argument('--sigma',default =1.0, type=float)
 args = parser.parse_args()
@@ -262,13 +263,20 @@ plt.legend()
 plt.savefig(args.out+'sigma'+'trial'+str(args.seed)+'.png')
 plt.clf()
 
-sns.kdeplot(data[:,0],(np.log(1+np.exp(data[:,1])))**2,color='green',label='Flows')
-sns.kdeplot(mu_samples_vi,sigma_samples_vi,color='blue',label='MF-VI')
-sns.kdeplot(mu_samples_MCMC_store,sigma_samples_MCMC_store,color='red',label='Gibbs')
-plt.legend()
-plt.xlabel(r'$\mu$')
-plt.ylabel(r'$\sigma^{2}$')
-plt.savefig(args.out+'contour.png')
+fig, ax = plt.subplots()
+handles =[]
+sns.kdeplot(data[:,0],(np.log(1+np.exp(data[:,1])))**2,color='green',label='Flows',ax=ax)
+handles.append(mlines.Line2D([], [], color='green', label="Flows"))
+sns.kdeplot(mu_samples_vi,sigma_samples_vi,color='blue',label='MF-VI',ax=ax)
+handles.append(mlines.Line2D([], [], color='blue', label="MF-VI"))
+sns.kdeplot(mu_samples_MCMC_store,sigma_samples_MCMC_store,color='red',label='Gibbs',ax=ax)
+handles.append(mlines.Line2D([], [], color='red', label="Gibbs"))
+plt.yticks(fontsize=10)
+plt.xticks(fontsize=10)
+ax.legend(handles = handles,fontsize=15)
+plt.xlabel(r'$\mu$',fontsize=20)
+plt.ylabel(r'$\sigma^{2}$',fontsize=20)
+plt.savefig(args.out+'contour.pdf')
 plt.clf()
 
 
@@ -327,7 +335,7 @@ params[1] = torch.Tensor(1).uniform_(1.0,1.0)
 #print(params)
 
 params.requires_grad_()
-n_optim_steps = int(10000)
+n_optim_steps = int(100)
 optimizer = torch.optim.Adam([params], 5e-2)
 loss_store=[]
 start = time.time()
@@ -375,8 +383,11 @@ plt.plot(xgrid,y,color="red",label='True Posterior')
 #sns.kdeplot(p_samples_MCMC_store,color='red',label='MC Samples')
 #sns.kdeplot(p_samples_vi,color="blue",label="MF-VI")
 sns.kdeplot(np.exp(data[:,0])/(1+np.exp(data[:,0])),color='green',label='Flows')
-plt.legend()
-plt.savefig(args.out+'p_'+'trial'+str(args.seed)+'.png')
+plt.ylabel("Density",fontsize=20)
+plt.yticks(fontsize=10)
+plt.xticks(fontsize=10)
+plt.legend(fontsize=13)
+plt.savefig(args.out+'p_'+'trial'+str(args.seed)+'.pdf')
 plt.clf()
 
 
@@ -386,11 +397,12 @@ plt.clf()
 #bspl = splrep(iters,elbo_store,s=4)
 #bspl_y = splev(iters,bspl)
 #plt.plot(iters,bspl_y)
-
 plt.plot(loss_store)
-#plt.ylabel("ELBO")
-#plt.xlabel("Epoch")
-plt.savefig(args.out+'loss2flows_seed'+str(args.seed)+'.png')
+plt.ylabel("ELBO",fontsize=15)
+plt.xlabel("Epochs",fontsize=15)
+plt.xticks(fontsize=10)
+plt.yticks(fontsize=10)
+plt.savefig(args.out+'loss2flows_seed'+str(args.seed)+'.pdf')
 plt.clf()
 
 loss_store_df=pd.DataFrame(loss_store)

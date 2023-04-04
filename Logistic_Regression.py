@@ -333,11 +333,13 @@ sns.kdeplot(beta_samples_VI[:,0],beta_samples_VI[:,1],color='blue',label='MF-VI'
 handles.append(mlines.Line2D([], [], color='blue', label="MF-VI"))
 sns.kdeplot(beta_samples_mh_store[:,0],beta_samples_mh_store[:,1],color='red',label='MCMC',ax=ax)
 handles.append(mlines.Line2D([], [], color='red', label="MCMC"))
-ax.legend(handles = handles)
-plt.xlabel(r'$\beta_{1}$')
-plt.ylabel(r'$\beta_{2}$')
+ax.legend(handles = handles,fontsize=15)
+plt.xlabel(r'$\beta_{1}$',fontsize=20)
+plt.ylabel(r'$\beta_{2}$',fontsize=20)
+plt.yticks(fontsize=10)
+plt.xticks(fontsize=10)
 plt.tight_layout()
-plt.savefig(args.out+'contour'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.savefig(args.out+'contour'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.pdf')
 plt.clf() 
 
 
@@ -383,9 +385,11 @@ plt.clf()
 sns.kdeplot(sse_betas_mcmc,color='red',label='MCMC')
 sns.kdeplot(sse_betas_vi,color='blue',label='MF-VI')
 sns.kdeplot(sse_betas_flows,color='green',label='Flows')
-plt.legend()
-plt.ylabel('Density of '+r'$||\beta-\beta_{0}||_{2}^{2}$')
-plt.savefig(args.out+'sse_beta_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+plt.legend(fontsize=15)
+plt.ylabel('Density of '+r'$||\beta-\beta_{0}||_{2}^{2}$',fontsize=20)
+plt.yticks(fontsize=10)
+plt.xticks(fontsize=10)
+plt.savefig(args.out+'sse_beta_dist'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.pdf')
 plt.clf()
 
 sns.kdeplot(acc_samples_mcmc,color='red',label='MCMC')
@@ -461,25 +465,25 @@ print("SE_avg",se_beta_avg)
 print("SE_max",se_beta_max)
 
 ###Further Diagnostic Analysis. This is not required in general to reproduce results in paper.
-if args.seed==3:
-    print("beta0",beta0)
-    beta_nonzero=beta0.nonzero()
-    for i in range(beta_nonzero[0].shape[0]):
-        idxb = beta_nonzero[0][i]
-        plt.figure(figsize=(6.4,4.8))
-        sns.kdeplot(beta_samples_mh_store[:,idxb],color='red',label='MCMC')
-        sns.kdeplot(beta_samples_VI[:,idxb],color='blue',label='MF-VI')
-        sns.kdeplot(data[:,idxb],color='green',label='Flows')
-        plt.axvline(x=beta0[idxb], color='gray',ls='--', label='Truth')
-        plt.axvline(x=0, color='purple',ls='--')
-        plt.axvline(x=q_lower_vi[idxb], color='blue',ls='--',label=r'$q_{lower}$'+' MFVI')
-        plt.axvline(x=q_lower_mcmc[idxb], color='red',ls='--',label=r'$q_{lower}$'+' MCMC')
-        plt.axvline(x=q_lower_flows[idxb], color='green',ls='--',label=r'$q_{lower}$'+' Flows')
-        plt.xlabel(r'$\beta$'+'_'+str(idxb))
-        plt.legend()   
-        plt.tight_layout()
-        plt.savefig(args.out+'Diagnostics/'+'beta_idx'+str(idxb)+'trial'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
-        plt.clf()
+#if args.seed==3:
+#    print("beta0",beta0)
+#    beta_nonzero=beta0.nonzero()
+#    for i in range(beta_nonzero[0].shape[0]):
+#        idxb = beta_nonzero[0][i]
+#        plt.figure(figsize=(6.4,4.8))
+#        sns.kdeplot(beta_samples_mh_store[:,idxb],color='red',label='MCMC')
+#        sns.kdeplot(beta_samples_VI[:,idxb],color='blue',label='MF-VI')
+#        sns.kdeplot(data[:,idxb],color='green',label='Flows')
+#        plt.axvline(x=beta0[idxb], color='gray',ls='--', label='Truth')
+#        plt.axvline(x=0, color='purple',ls='--')
+#        plt.axvline(x=q_lower_vi[idxb], color='blue',ls='--',label=r'$q_{lower}$'+' MFVI')
+#        plt.axvline(x=q_lower_mcmc[idxb], color='red',ls='--',label=r'$q_{lower}$'+' MCMC')
+#        plt.axvline(x=q_lower_flows[idxb], color='green',ls='--',label=r'$q_{lower}$'+' Flows')
+#        plt.xlabel(r'$\beta$'+'_'+str(idxb))
+#        plt.legend()   
+#        plt.tight_layout()
+#        plt.savefig(args.out+'Diagnostics/'+'beta_idx'+str(idxb)+'trial'+str(args.seed)+'_ndata_'+str(args.n_data)+'_p_'+str(args.data_dim)+'.png')
+#        plt.clf()
 
 
 #############Write Results to Excel######################################################
