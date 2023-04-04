@@ -335,7 +335,7 @@ params[1] = torch.Tensor(1).uniform_(1.0,1.0)
 #print(params)
 
 params.requires_grad_()
-n_optim_steps = int(100)
+n_optim_steps = int(10000)
 optimizer = torch.optim.Adam([params], 5e-2)
 loss_store=[]
 start = time.time()
