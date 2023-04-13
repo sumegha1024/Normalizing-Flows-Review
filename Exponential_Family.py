@@ -27,7 +27,7 @@ import matplotlib.lines as mlines
 parser = argparse.ArgumentParser(description='inputs_exp')
 parser.add_argument('--lr', default = 0.0005, type=float, help='learning rate')
 parser.add_argument('--seed',default =2, type=int, help='seed for simulation')
-parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Temp1/', type=str, help='path to results')
+parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Out/Out_Exponential/', type=str, help='path to results')
 parser.add_argument('--n_data',default =50, type=int, help='number of samples for observed y')
 parser.add_argument('--sigma',default =1.0, type=float)
 args = parser.parse_args()

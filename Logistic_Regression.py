@@ -34,7 +34,7 @@ parser.add_argument('--rho',default =0.0, type=float, help='Correlation coeffici
 parser.add_argument('--tau',default =1.0, type=float, help='Standard dev for simulated data')
 parser.add_argument('--lr', default = 0.0005, type=float, help='learning rate')
 parser.add_argument('--seed',default =3, type=int, help='seed for simulation')
-parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Temp3/', type=str, help='path to results')
+parser.add_argument('--out',default = '/mnt/home/premchan/Normalizing-Flows-Review/Out/Out_Logistic/', type=str, help='path to results')
 parser.add_argument('--data_dim',default =2, type=int, help='dimension of beta vector')
 parser.add_argument('--n_data',default =50, type=int, help='number of samples for y')
 parser.add_argument('--sparse',default =0.2, type=float, help='sparsity level in %')
