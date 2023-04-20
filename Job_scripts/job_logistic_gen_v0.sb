@@ -1,0 +1,36 @@
+#!/bin/bash --login
+########## SBATCH Lines for Resource Request ##########
+ 
+#SBATCH --time=01:00:00             # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --nodes=1                # number of different nodes - could be an exact number or a range of nodes (same as -N)
+#SBATCH --constraint="intel16"
+#SBATCH --ntasks=1                 # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --cpus-per-task=4
+#SBATCH --gres=gpu:1
+#SBATCH --mem=64G            # memory required per allocated CPU (or core) - amount of memory (in bytes)
+#SBATCH --job-name regression
+#SBATCH -a 0-11
+
+########## Command Lines for Job Running ##########
+
+a1=(2 20 50 100) #p
+a2=(50 100 200) #n
+a3=(3) #seed
+module purge
+module load Conda/3
+
+export PATH=$HOME/anaconda3/bin:$PATH
+export LD_LIBRARY_PATH=/mnt/home/premchan/anaconda3/lib:$LD_LIBRARY_PATH
+
+conda activate NAF_v2
+ 
+cd /mnt/home/premchan/Normalizing-Flows-Review/                   ### change to the directory where your code is located.
+
+
+python3 Logistic_Regression.py --data_dim ${a1[$(( $SLURM_ARRAY_TASK_ID%${#a1[@]} ))]} --n_data ${a2[$(( $(( $SLURM_ARRAY_TASK_ID/${#a1[@]} ))%${#a2[@]} ))]} --seed ${a3[$(( $(( $SLURM_ARRAY_TASK_ID/${#a1[@]} ))/${#a2[@]} ))]} --out '/mnt/home/premchan/Normalizing-Flows-Review/Out/Out_Logistic/' --rho 0  ### call your executable. (use srun instead of mpirun.)
+
+
+conda deactivate
+ 
+scontrol show job $SLURM_JOB_ID     ### write job information to SLURM output file.
+#js -j $SLURM_JOB_ID                 ### write resource usage to SLURM output file (powertools command).

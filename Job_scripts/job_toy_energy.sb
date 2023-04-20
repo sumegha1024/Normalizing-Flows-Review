@@ -1,0 +1,34 @@
+#!/bin/bash --login
+########## SBATCH Lines for Resource Request ##########
+ 
+#SBATCH --time=00:30:00             # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --nodes=1                # number of different nodes - could be an exact number or a range of nodes (same as -N)
+#SBATCH --constraint="intel16"
+#SBATCH --ntasks=1                 # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --cpus-per-task=4
+#SBATCH --gres=gpu:1
+#SBATCH --mem=8G            # memory required per allocated CPU (or core) - amount of memory (in bytes)
+#SBATCH --job-name toy_energy
+#SBATCH -a 0-44
+
+a1=("U1" "U2" "U3" "U4" "U5" "U6" "U7" "U8" "U9")
+a2=(0 1 2 3 4)
+########## Command Lines for Job Running ##########
+module purge
+module load Conda/3
+
+export PATH=$HOME/anaconda3/bin:$PATH
+export LD_LIBRARY_PATH=/mnt/home/premchan/anaconda3/lib:$LD_LIBRARY_PATH
+
+conda activate NAF_v1
+ 
+cd /mnt/home/premchan/Normalizing-Flows-Review/                   ### change to the directory where your code is located.
+
+
+python3 model_iaf_toy.py --seed ${a2[$(( $SLURM_ARRAY_TASK_ID%${#a2[@]} -1 ))]} --key ${a1[$SLURM_ARRAY_TASK_ID/${#a2[@]}]} --writecsv     ### call your executable. (use srun instead of mpirun.)
+
+
+conda deactivate
+ 
+scontrol show job $SLURM_JOB_ID     ### write job information to SLURM output file.
+#js -j $SLURM_JOB_ID                 ### write resource usage to SLURM output file (powertools command).
