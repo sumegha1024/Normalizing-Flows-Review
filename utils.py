@@ -47,3 +47,37 @@ def kldiv(X, Y, reg_X=1e-10, reg_Y=1e-10):
     Yreg /= Yreg.sum()
     s1 = (Xnorm * np.log(Xreg / Yreg)).sum()
     return s1
+
+
+def pr_or_roc_curve(ground_truth, scores,pr=True):
+    sorted_indices = np.argsort(scores)[::-1]
+    sorted_scores = scores[sorted_indices]
+    sorted_labels = ground_truth[sorted_indices]
+
+    thresholds = np.unique(sorted_scores)
+    n_thresholds = len(thresholds)
+
+    precision = np.zeros(n_thresholds)
+    recall = np.zeros(n_thresholds)
+    tp = np.zeros(n_thresholds)
+    fp = np.zeros(n_thresholds)
+    fn = np.zeros(n_thresholds)
+    tn = np.zeros(n_thresholds)
+
+    for i, threshold in enumerate(thresholds):
+        tp[i] = np.sum((sorted_scores >= threshold) & (sorted_labels == 1))
+        fp[i] = np.sum((sorted_scores >= threshold) & (sorted_labels == 0))
+        fn[i] = np.sum((sorted_scores < threshold) & (sorted_labels == 1))
+        tn[i] = np.sum((sorted_scores < threshold) & (sorted_labels == 0))
+        precision[i] = tp[i] / (tp[i] + fp[i]) if tp[i] + fp[i] != 0 else 1.0
+        recall[i] = tp[i] / (tp[i] + fn[i]) if tp[i] + fn[i] != 0 else 1.0
+
+    if pr==True:
+        return precision, recall, thresholds
+    else: 
+        return fp/(fp+tn), recall, thresholds
+
+def area_under_curve(x, y):
+    area = np.trapz(x, y)
+    return area
+
